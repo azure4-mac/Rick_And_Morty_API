@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:rickandmortyapi/character/characterslist.dart';
+import 'package:rickandmortyapi/location/locationslist.dart';
 
 class HomeScreen extends StatelessWidget {
   @override
@@ -28,6 +29,10 @@ class HomeScreen extends StatelessWidget {
             GestureDetector(
               child: Image.asset("assets/img/locations.png", width: 150),
               onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => LocationsPage()),
+                );
                 debugPrint("locations");
               },
             ),

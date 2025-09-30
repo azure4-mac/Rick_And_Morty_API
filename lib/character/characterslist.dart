@@ -1,7 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:rickandmortyapi/model/Character.dart';
-import 'dart:convert';
 
 class CharactersPage extends StatefulWidget {
   @override
@@ -9,17 +9,45 @@ class CharactersPage extends StatefulWidget {
 }
 
 class _CharactersPageState extends State<CharactersPage> {
-  Future<List<Character>> getCharacters() async {
+  final List<Character> _characters = [];
+  int _currentPage = 1;
+  bool _isLoading = false;
+  bool _hasMore = true;
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCharacters();
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >=
+              _scrollController.position.maxScrollExtent - 200 &&
+          !_isLoading &&
+          _hasMore) {
+        _fetchCharacters();
+      }
+    });
+  }
+
+  Future<void> _fetchCharacters() async {
+    setState(() => _isLoading = true);
+
     final response = await http.get(
-      Uri.parse('https://rickandmortyapi.com/api/character'),
+      Uri.parse('https://rickandmortyapi.com/api/character?page=$_currentPage'),
     );
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
-      final List results = data['results'];
-      return results.map((c) => Character.fromJson(c)).toList();
+      setState(() {
+        _characters.addAll(
+          (data['results'] as List).map((c) => Character.fromJson(c)),
+        );
+        _currentPage++;
+        _hasMore = data['info']['next'] != null;
+        _isLoading = false;
+      });
     } else {
-      throw Exception('Failed to load characters');
+      setState(() => _isLoading = false);
     }
   }
 
@@ -27,46 +55,46 @@ class _CharactersPageState extends State<CharactersPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Characters")),
-      body: FutureBuilder<List<Character>>(
-        future: getCharacters(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text("Erro: ${snapshot.error}"));
+      body: ListView.builder(
+        controller: _scrollController,
+        itemCount: _characters.length + (_isLoading ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index == _characters.length) {
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: CircularProgressIndicator(),
+              ),
+            );
           }
 
-          final characters = snapshot.data!;
-          return ListView.builder(
-            itemCount: characters.length,
-            itemBuilder: (context, index) {
-              final character = characters[index];
-              return ExpansionTile(
-                leading: Image.network(character.image, width: 50, height: 50),
-                title: Text(character.name),
-                subtitle: Text("${character.species} — ${character.status}"),
+          final c = _characters[index];
+          return Card(
+            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            child: ListTile(
+              leading: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(
+                  c.image,
+                  width: 50,
+                  height: 50,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              title: Text(
+                c.name,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Image.network(character.image, width: 150, height: 150),
-                        const SizedBox(height: 10),
-                        Text("Nome: ${character.name}"),
-                        Text("Status: ${character.status}"),
-                        Text("Espécie: ${character.species}"),
-                        Text("Gênero: ${character.gender}"),
-                        Text("Origem: ${character.origin}"),
-                        Text("Criado em: ${character.created}"),
-                        Text("URL: ${character.url}"),
-                      ],
-                    ),
-                  ),
+                  Text("Species: ${c.species}"),
+                  Text("Status: ${c.status}"),
+                  Text("Gender: ${c.gender}"),
+                  Text("Origin: ${c.origin}"),
                 ],
-              );
-            },
+              ),
+            ),
           );
         },
       ),
