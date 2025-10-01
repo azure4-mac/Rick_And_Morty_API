@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:rickandmortyapi/model/Character.dart';
+import 'package:rickandmortyapi/character/charactersdetails.dart'; // importa a tela de detalhes
 
 class CharactersPage extends StatefulWidget {
   @override
@@ -94,6 +95,14 @@ class _CharactersPageState extends State<CharactersPage> {
                   Text("Origin: ${c.origin}"),
                 ],
               ),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => CharacterDetailPage(character: c),
+                  ),
+                );
+              },
             ),
           );
         },
